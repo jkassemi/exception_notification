@@ -67,6 +67,36 @@ class SlackNotifierTest < ActiveSupport::TestCase
     assert_nil slack_notifier.call(fake_exception)
   end
 
+  test "should send an exception with a message prefix" do
+    prefix = "[prefix] "
+
+    options = {
+      webhook_url: "http://slack.webhook.url",
+      message_prefix: prefix
+    }
+
+    expected_notification = "#{prefix}#{fake_notification}"
+    Slack::Notifier.any_instance.expects(:ping).with(expected_notification, {})
+
+    slack_notifier = ExceptionNotifier::SlackNotifier.new(options)
+    slack_notifier.call(fake_exception)
+  end
+
+  test "should send an exception when no backtrace exists on exception object" do
+    backtraceless_exception = RuntimeError.new("no backtrace available")
+    assert_nil backtraceless_exception.backtrace
+
+    options = {
+      webhook_url: "http://slack.webhook.url",
+    }
+
+    expected_notification = "An exception occurred: '#{backtraceless_exception.message}'"
+    Slack::Notifier.any_instance.expects(:ping).with(expected_notification, {})
+
+    slack_notifier = ExceptionNotifier::SlackNotifier.new(options)
+    slack_notifier.call(backtraceless_exception)
+  end
+
   private
 
   def fake_exception
